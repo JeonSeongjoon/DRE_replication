@@ -1,3 +1,6 @@
+This is the replication work of the DDRel dataset below. Please check the paper.
+
+
 # DialogueRelationClassification
 
 Paper: "DDRel: A new dataset for interpersonal relation classification in dyadic dialogues" has been accepted by AAAI2021.
