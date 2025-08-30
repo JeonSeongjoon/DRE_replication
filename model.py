@@ -7,8 +7,8 @@ from collections import OrderedDict
 from argparse import ArgumentParser
 from typing import List, Union, Dict
 from torch.optim import Adam, SGD, Adadelta
-from pytorch_lightning import LightningModule
-from torchmetrics.functional import accuracy, f1_score
+from pytorch_lightning.core.lightning import LightningModule
+from pytorch_lightning.metrics.functional import accuracy, f1_score
 
 
 class ConversationRelationModel(LightningModule):
