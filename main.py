@@ -30,19 +30,22 @@ def train_bert_baseline(args):
     )
     dataset.setup(stage="fit", data_augmentation=args.data_augmentation)
 
-    trainer = pl.Trainer(gpus=[args.device],
-                         max_epochs=args.max_epochs,
-                         accumulate_grad_batches=args.accumulate_grad_batches,
-                         early_stop_callback=False,  # default patience = 3
-                         default_root_dir=args.default_root_dir,
-                         )
+    # Updated for PyTorch Lightning 1.9.4
+    trainer = pl.Trainer(
+        devices=[args.device],  # gpus -> devices
+        accelerator='gpu',      # specify accelerator
+        max_epochs=args.max_epochs,
+        accumulate_grad_batches=args.accumulate_grad_batches,
+        enable_checkpointing=True,  # early_stop_callback -> enable_checkpointing
+        default_root_dir=args.default_root_dir,
+    )
     trainer.fit(bert_baseline,
-                train_dataloader=dataset.train_dataloader(),
+                train_dataloaders=dataset.train_dataloader(),  # train_dataloader -> train_dataloaders
                 val_dataloaders=dataset.val_dataloader(),
                 )
 
     dataset.setup(stage="test", data_augmentation=args.data_augmentation)
-    trainer.test(test_dataloaders=dataset.test_dataloader())
+    trainer.test(dataloaders=dataset.test_dataloader())  # test_dataloaders -> dataloaders
 
 
 def test_bert_baseline(args):
@@ -62,12 +65,9 @@ def test_bert_baseline(args):
         collator=collator
     )
     dataset.setup(stage="test")
-    # dataset.prepare_data()
 
-    trainer = pl.Trainer(gpus=[1])
-    trainer.test(bert_baseline, test_dataloaders=dataset.test_dataloader())
-
-    # compute_f1_macro("experiment_scripts/BERT_baseline.json", average_mode="macro")
+    trainer = pl.Trainer(devices=[1], accelerator='gpu')  # gpus -> devices + accelerator
+    trainer.test(bert_baseline, dataloaders=dataset.test_dataloader())  # test_dataloaders -> dataloaders
 
 
 def train_cnn_baseline(args):
@@ -86,19 +86,21 @@ def train_cnn_baseline(args):
     )
     dataset.setup(stage="fit")
 
-    trainer = pl.Trainer(gpus=[args.device],
-                         max_epochs=args.max_epochs,
-                         accumulate_grad_batches=args.accumulate_grad_batches,
-                         early_stop_callback=True,  # default patience = 3
-                         default_root_dir=args.default_root_dir,
-                         )
+    trainer = pl.Trainer(
+        devices=[args.device],
+        accelerator='gpu',
+        max_epochs=args.max_epochs,
+        accumulate_grad_batches=args.accumulate_grad_batches,
+        enable_checkpointing=True,  # early_stop_callback -> enable_checkpointing
+        default_root_dir=args.default_root_dir,
+    )
     trainer.fit(cnn_baseline,
-                train_dataloader=dataset.train_dataloader(),
+                train_dataloaders=dataset.train_dataloader(),
                 val_dataloaders=dataset.val_dataloader(),
                 )
 
     dataset.setup(stage="test")
-    trainer.test(test_dataloaders=dataset.test_dataloader())
+    trainer.test(dataloaders=dataset.test_dataloader())
 
 
 def test_cnn_baseline(args):
@@ -113,10 +115,9 @@ def test_cnn_baseline(args):
         collator=collator
     )
     dataset.setup(stage="test")
-    # dataset.prepare_data()
 
-    trainer = pl.Trainer(gpus=[1])
-    trainer.test(cnn_baseline, test_dataloaders=dataset.test_dataloader())
+    trainer = pl.Trainer(devices=[1], accelerator='gpu')
+    trainer.test(cnn_baseline, dataloaders=dataset.test_dataloader())
 
 
 def train_lstm_baseline(args):
@@ -136,20 +137,22 @@ def train_lstm_baseline(args):
     )
     dataset.setup(stage="fit")
 
-    trainer = pl.Trainer(gpus=[args.device],
-                         max_epochs=args.max_epochs,
-                         accumulate_grad_batches=args.accumulate_grad_batches,
-                         early_stop_callback=True,  # default patience = 3
-                         gradient_clip_val=0.5,
-                         default_root_dir=args.default_root_dir,
-                         )
+    trainer = pl.Trainer(
+        devices=[args.device],
+        accelerator='gpu',
+        max_epochs=args.max_epochs,
+        accumulate_grad_batches=args.accumulate_grad_batches,
+        enable_checkpointing=True,
+        gradient_clip_val=0.5,
+        default_root_dir=args.default_root_dir,
+    )
     trainer.fit(lstm_baseline,
-                train_dataloader=dataset.train_dataloader(),
+                train_dataloaders=dataset.train_dataloader(),
                 val_dataloaders=dataset.val_dataloader(),
                 )
 
     dataset.setup(stage="test")
-    trainer.test(test_dataloaders=dataset.test_dataloader())
+    trainer.test(dataloaders=dataset.test_dataloader())
 
 
 def test_lstm_baseline(args):
@@ -164,14 +167,12 @@ def test_lstm_baseline(args):
         collator=collator
     )
     dataset.setup(stage="test")
-    # dataset.prepare_data()
 
-    trainer = pl.Trainer(gpus=[1])
-    trainer.test(lstm_baseline, test_dataloaders=dataset.test_dataloader())
+    trainer = pl.Trainer(devices=[1], accelerator='gpu')
+    trainer.test(lstm_baseline, dataloaders=dataset.test_dataloader())
 
 
 if __name__ == "__main__":
-    # experiment()
     parser = ArgumentParser()
 
     parser.add_argument("--batch_size", type=int, default=32, help="batch size")
@@ -184,8 +185,14 @@ if __name__ == "__main__":
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")
     parser.add_argument("--data_augmentation", type=bool, default=False, help="data augmentation mentioned in the paper")
 
+    # Add model specific arguments
     parser = BertBaselineModel.add_model_specific_arguments(parser)
-    parser = pl.Trainer.add_argparse_args(parser)
+    
+    # Removed deprecated pl.Trainer.add_argparse_args(parser)
+    # Add trainer arguments manually if needed
+    parser.add_argument("--max_epochs", type=int, default=10, help="maximum number of epochs")
+    parser.add_argument("--accumulate_grad_batches", type=int, default=1, help="accumulate gradients")
+    parser.add_argument("--default_root_dir", type=str, default="./", help="default root directory")
 
     args = parser.parse_args()
     pl.seed_everything(args.random_seed)
